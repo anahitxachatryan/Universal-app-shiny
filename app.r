@@ -207,20 +207,20 @@ transform_data = function(data, func){
                  # plotOutput("plot")
                )# mainPanel,
                ),
+      
       tabPanel("Explore",
                sidebarPanel(
                  selectInput("groupby", "Column to group by:", "", multiple = TRUE),
                  selectInput("aggregate", "Column to aggregate:", "",multiple = TRUE),
                  selectInput("func", "Aggregate by:", choices = c(mean = "mean",
-                                                                  std = "std",
+                                                                  std = "sd",
                                                                   median = "median",
-                                                                  count = "count",
                                                                   max = "max",
                                                                   min = "min"),multiple = TRUE)
                ),
                mainPanel(
                  htmlOutput("header_agg"),
-                 DT::dataTableOutput('transformed_table'),
+                 DT::dataTableOutput('agg_table'),
                )
                ),
 
@@ -317,7 +317,30 @@ transform_data = function(data, func){
     })
     
 
+    output$agg_table <- DT::renderDataTable({
+      
+      library(dplyr)
+      # 
+      # iris %>%
+      #   group_by(Sepal.Length) %>%
+      #   summarise(n.uniq=n_distinct(Sepal.Width)) %>%
+      #   filter(n.uniq > 1)
+      # myData() %>%
+        # select(all_of(input$selected)) %>%
+        # group_by(across(all_of(input$groupby))) %>%
+        # summary() 
+      myData() %>%
+        # select(!!!rlang::syms(input$selected)) %>%
+        group_by(!!!rlang::syms(input$groupby)) %>%
+        summarise_at(input$aggregate, (input$func), na.rm=TRUE)
+      # funs(min, max)
+        # summarise(Moyenne = mean(Age))
+      # summarise(across(where(is.numeric), sum))
+      # summarize_if(is.numeric,sum,na.rm = TRUE) ## WORKED
 
+      
+      
+    })
     output$contents <- DT::renderDataTable({
 
       if (input$prev == "head") {
@@ -370,6 +393,7 @@ transform_data = function(data, func){
     output$header_agg <- renderUI({
       
       HTML("<h2>Data aggregation</h2>")
+      HTML(paste(input$aggregate))
       
     })
     output$boxplotOutliers <- renderPlot({ ################
