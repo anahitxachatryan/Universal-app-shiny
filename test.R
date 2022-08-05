@@ -58,3 +58,12 @@ fill_missing_vals = function(data, stat_measure){
 
 data = fill_missing_vals(data, "std")
 head(data)
+
+
+
+
+library(plotly)
+fig <- plot_ly(y = ~rnorm(50), type = "box")
+fig <- fig %>% add_trace(y = ~rnorm(50, 1))
+
+fig

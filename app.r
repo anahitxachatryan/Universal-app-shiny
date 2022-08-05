@@ -2,6 +2,7 @@ library(shiny)
 library(shinythemes)
 library(dplyr)
 library(ggplot2)
+library(ggthemes)
 if (!require("DT")) install.packages('DT')
 factorize = function(data){
   data_cat = select(data, is.character)
@@ -145,7 +146,7 @@ transform_data = function(data, func){
                  #          tags$p("Ready to take the Shiny tutorial? If so"),
                  #          tags$a(href="shiny.rstudio.com/tutorial", "Click Here!")
                  # ),
-                 htmlOutput('test'),
+                 
                  htmlOutput("DataPreview"),
                  DT::dataTableOutput('contents'),
                  htmlOutput("SummaryOfData"),
@@ -201,7 +202,7 @@ transform_data = function(data, func){
                  htmlOutput("header_preprocess"),
                  DT::dataTableOutput('data_transformed'),
                  # htmlOutput('test'),
-                 plotOutput("boxplotOutliers")
+                 
                  #,
                  # textOutput('text'),
                  # plotOutput("plot")
@@ -216,18 +217,35 @@ transform_data = function(data, func){
                                                                   std = "sd",
                                                                   median = "median",
                                                                   max = "max",
-                                                                  min = "min"),multiple = TRUE)
+                                                                  min = "min"),multiple = TRUE),
+                 selectInput("filter", "Select column to filter:", "", multiple = TRUE),
                ),
+               
                mainPanel(
                  htmlOutput("header_agg"),
                  DT::dataTableOutput('agg_table'),
+                 htmlOutput("header_filter"),
+                 DT::dataTableOutput('filtered_table'),
                )
                ),
+      tabPanel("Outliers",
+               sidebarPanel(
+                 selectInput("outl_col1", "Select X axis:", "", multiple = FALSE),
+                 selectInput("outl_col2", "Select Y axis:", "", multiple = FALSE),
+                 selectInput("col_fill", "Select fill column:", "", multiple = FALSE)
 
+               ),
+               
+               mainPanel(
+                 htmlOutput('test'),
+                 htmlOutput("header_outliers"),
+                 plotOutput("boxplotOutliers")
+
+               )
+               ),
       tabPanel("Histogram"),
       tabPanel("Scatter Plot"),
       tabPanel("Line Plot"),
-      tabPanel("Box Plot"),
       tabPanel("Bar Plot"),
       tabPanel("Heatmap"),
       
@@ -281,9 +299,23 @@ transform_data = function(data, func){
         return(NULL)
       } else {
         read.csv(inFile()$datapath)
+        
       }
 
     })
+    
+    myData_cat <- reactive({
+      
+      if (is.null(inFile())) {
+        return(NULL)
+      } else {
+        df = read.csv(inFile()$datapath)
+        data_cat = select(df, is.character)
+        return(data_cat)
+      }
+      
+    })
+    
     myData_numerics <- reactive({
       if (is.null(inFile())) {
         return(NULL)
@@ -303,7 +335,7 @@ transform_data = function(data, func){
       updateSelectInput(
         session,
         "groupby",
-        choices=names(take_data()))
+        choices=names(myData_cat()))
       updateSelectInput(
         session,
         "aggregate",
@@ -312,41 +344,54 @@ transform_data = function(data, func){
         session,
         "OutlierCol",
         choices=names(take_data()))
+      updateSelectInput(
+        session,
+        "filter",
+        choices=names(take_data()))
+      updateSelectInput(
+        session,
+        "outl_col1",
+        choices=names(take_data()))
+      updateSelectInput(
+        session,
+        "outl_col2",
+        choices=names(take_data()))
+      updateSelectInput(
+        session,
+        "col_fill",
+        choices=names(myData_cat()))
+      
+      
       
       
     })
     
 
     output$agg_table <- DT::renderDataTable({
-      
-      library(dplyr)
-      # 
-      # iris %>%
-      #   group_by(Sepal.Length) %>%
-      #   summarise(n.uniq=n_distinct(Sepal.Width)) %>%
-      #   filter(n.uniq > 1)
-      # myData() %>%
-        # select(all_of(input$selected)) %>%
-        # group_by(across(all_of(input$groupby))) %>%
-        # summary() 
-      myData() %>%
-        # select(!!!rlang::syms(input$selected)) %>%
+      grouped_df = myData() %>%
         group_by(!!!rlang::syms(input$groupby)) %>%
         summarise_at(input$aggregate, (input$func), na.rm=TRUE)
-      # funs(min, max)
-        # summarise(Moyenne = mean(Age))
-      # summarise(across(where(is.numeric), sum))
-      # summarize_if(is.numeric,sum,na.rm = TRUE) ## WORKED
-
+      return(grouped_df)
       
       
-    })
+    }, options = list(scrollX = T))
+    
+    
+    output$filtered_table <- DT::renderDataTable({
+      filtered_df = myData() %>%
+        select(!!!rlang::syms(input$filter))
+      return(filtered_df)
+      
+      
+    }, options = list(scrollX = T))
+    
+    
     output$contents <- DT::renderDataTable({
 
       if (input$prev == "head") {
         return(head(myData()))
       }
-      DT::datatable(myData())
+     return(myData())
     }, options = list(scrollX = T))
     
     output$summary <- renderPrint({
@@ -393,18 +438,36 @@ transform_data = function(data, func){
     output$header_agg <- renderUI({
       
       HTML("<h2>Data aggregation</h2>")
-      HTML(paste(input$aggregate))
       
     })
-    output$boxplotOutliers <- renderPlot({ ################
+    
+    output$header_filter <- renderUI({
+      
+      HTML("<h2>Data Filter</h2>")
+      
+    })
+    
+    output$header_outliers <- renderUI({
+      
+      HTML("<h2>Outlier detection </h2>")
+      
+    })
+    
+    
+    output$boxplotOutliers <- renderPlot({ 
 
       data=myData()
       data = fill_missing_vals(data, "median")
-      col = input$OutlierCol
-      # x_aes = data$col
-      ggplot(data=data, aes(x=data$col, y=data$HIGH))+ geom_boxplot()
-      # ggplot()+geom_histogram(aes(x=col), bins = 50)
-
+      col_x = input$outl_col1
+      col_y = input$outl_col2
+      col_fill = input$col_fill
+      ggplot(data=data, aes_string(y=col_y, x = col_x, fill=col_fill))+ geom_boxplot()+
+      theme_bw()+
+      labs(title=paste(col_x, " VS ", col_y))+
+      scale_fill_brewer(palette = "Pastel2")+
+      theme(axis.title.y = element_text(size=20),
+            axis.title.x = element_text(size=20),
+            title = element_text(size=20))
     })
     output$header_preprocess <- renderUI({
 
@@ -469,17 +532,12 @@ transform_data = function(data, func){
       
     }, options = list(scrollX = T))
 
-    output$test <- renderUI({
-      if (input$factorizeCol =="Yes"){
-        
-        # col = input$date
-        # data = to_data(col)
-        HTML(paste("fone"))
-      }
- 
-  # HTML())
-  # HTML(paste(class(input$Col), "bb"))
-    })
+  #   output$test <- renderUI({
+  #     
+  # 
+  # # HTML())
+  # HTML(paste(input$outl_col1, "bb"))
+  #   })
     
     
   }
