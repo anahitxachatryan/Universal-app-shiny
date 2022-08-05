@@ -11,7 +11,16 @@ factorize = function(data){
   return (data)
 }
 to_date = function(colname, data){
-  data[,colname]<-as.Date(data[,colname], format="%d-%b-%y") 
+  possible_formats = c("%Y-%d-%m", "%d-%b-%y", "%m-%d-%Y", "%b-%d-%Y", "%d-%m-%Y")
+  for (i in 1:length(possible_formats)){
+    old_col = data[,colname]
+    data[,colname] = as.Date(data[,colname], format=possible_formats[i]) 
+    
+    if(sum(is.na(data[,colname])) == nrow(data) ){
+      data[,colname] = old_col
+    }
+  }
+  data[,colname]<-as.Date(data[,colname], format=format_given) 
   return (data)
   
 }
@@ -111,13 +120,7 @@ transform_data = function(data, func){
                                                'text/comma-separated-values,text/plain',
                                                '.csv')
                                   ),
-                                  
-                                  # # Input: Select separator ----
-                                  #   radioButtons("sep", "Separator",inline=T,
-                                  #                choices = c(Comma = ",",
-                                  #                            Semicolon = ";",
-                                  #                            Tab = "\t"),
-                                  #                selected = ","),
+
                                   radioButtons(
                                     "display",
                                     "Display",
@@ -126,10 +129,8 @@ transform_data = function(data, func){
                                                 Summary = 'summary'),
                                     selected = "str"
                                   ),
-                                  # selectInput('dateCol','Select Date column: ', ""),
-                                  selectInput("date", "Select Date column:", ""),
-
-                                  # Input: Select number of rows to display ----
+                                  selectInput("date", "Select date column:", ""),
+                                  
                                   radioButtons(
                                     "prev",
                                     "Preview",
@@ -142,18 +143,10 @@ transform_data = function(data, func){
                                   uiOutput('select')
                                   ), # sidebarPanel
                mainPanel(
-                 # tags$div(class="header", checked=NA,
-                 #          tags$p("Ready to take the Shiny tutorial? If so"),
-                 #          tags$a(href="shiny.rstudio.com/tutorial", "Click Here!")
-                 # ),
-                 
                  htmlOutput("DataPreview"),
                  DT::dataTableOutput('contents'),
                  htmlOutput("SummaryOfData"),
                  verbatimTextOutput('summary'),
-                #,
-                 # textOutput('text'),
-                 # plotOutput("plot")
                )# mainPanel,
                
               
@@ -176,36 +169,20 @@ transform_data = function(data, func){
                      Logarithm = "log",
                      Square = "sqr"),
                    selected = "nothing"
-                 ),                 # conditionalPanel(
-                 #   condition = "transform",
-                 #   checkboxGroupInput("transform", "Transformation",
-                 #                      choices = c("norm", "log", "sqr"), selected = FALSE
-                 #   ),
-                 # ),
-                 
-                 # checkboxInput("rm_outl", "Remove Outliers",TRUE),
+                 ),                 
+
                  conditionalPanel(
                    condition = "rm_outl",
                    checkboxGroupInput("outliers", "Outliers",
                                       choices = c("Remove Outliers"), selected = FALSE
                                       ),
                ),
-               selectInput("OutlierCol", "Choose column:", ""),
-               selectInput("Col", "Choose cokumn:", choices  = c("OPEN", "CLOSE")),
-                 
-                 
-               
-                
+
                  ),
                mainPanel(
   
                  htmlOutput("header_preprocess"),
                  DT::dataTableOutput('data_transformed'),
-                 # htmlOutput('test'),
-                 
-                 #,
-                 # textOutput('text'),
-                 # plotOutput("plot")
                )# mainPanel,
                ),
       
@@ -217,7 +194,7 @@ transform_data = function(data, func){
                                                                   std = "sd",
                                                                   median = "median",
                                                                   max = "max",
-                                                                  min = "min"),multiple = TRUE),
+                                                                  min = "min"),multiple = TRUE, selected = "mean"),
                  selectInput("filter", "Select column to filter:", "", multiple = TRUE),
                ),
                
@@ -232,7 +209,8 @@ transform_data = function(data, func){
                sidebarPanel(
                  selectInput("outl_col1", "Select X axis:", "", multiple = FALSE),
                  selectInput("outl_col2", "Select Y axis:", "", multiple = FALSE),
-                 selectInput("col_fill", "Select fill column:", "", multiple = FALSE)
+                 selectInput("col_fill", "Select fill column:", "", multiple = FALSE),
+                 checkboxInput("flip_coords", "Flip axis", FALSE),
 
                ),
                
@@ -243,7 +221,19 @@ transform_data = function(data, func){
 
                )
                ),
-      tabPanel("Histogram"),
+      tabPanel("Histogram",
+               sidebarPanel(
+                 selectInput("hist_x", "Select X axis:", "", multiple = FALSE),
+                 sliderInput("binsize", label = h3("Bin Size"), min = 10, 
+                             max = 100, value = 50, step = 5),
+            selectInput("fill_hist", "Select fill column:", "", multiple = FALSE)
+               ),
+               
+               mainPanel(
+                 htmlOutput("header_histogram"),
+                 plotOutput("pltHist")
+                 
+               )),
       tabPanel("Scatter Plot"),
       tabPanel("Line Plot"),
       tabPanel("Bar Plot"),
@@ -253,8 +243,7 @@ transform_data = function(data, func){
     ) # navbarPage
   ) # fluidPage
 
-  
-  # Define server function  
+
   server <- function(input, output, session) {
 
 
@@ -279,16 +268,6 @@ transform_data = function(data, func){
         col = input$date
         data = to_date(col, data)
       }
-      # if(input$factorizeCol == "Yes"){
-      # 
-      #   data = factorize(data)
-      # }
-      # if(is.null(input$factorizeCol)){
-      #   
-      #   data  = read.csv(inFile()$datapath)
-      # }
-      # 
-
       return (data)
     })
     
@@ -330,38 +309,41 @@ transform_data = function(data, func){
       updateSelectInput(
         session,
         "date",
-        choices=c("",names(take_data())))
+        choices = c("",names(take_data())))
       
       updateSelectInput(
         session,
         "groupby",
-        choices=names(myData_cat()))
+        choices = names(myData_cat()))
       updateSelectInput(
         session,
         "aggregate",
-        choices=names(myData_numerics()))
-      updateSelectInput(
-        session,
-        "OutlierCol",
-        choices=names(take_data()))
+        choices = names(myData_numerics()))
       updateSelectInput(
         session,
         "filter",
-        choices=names(take_data()))
+        choices = names(take_data()))
       updateSelectInput(
         session,
         "outl_col1",
-        choices=names(take_data()))
+        choices = names(take_data()))
       updateSelectInput(
         session,
         "outl_col2",
-        choices=names(take_data()))
+        choices = names(myData_numerics()))
       updateSelectInput(
         session,
         "col_fill",
-        choices=names(myData_cat()))
+        choices = c("None", names(myData_cat())))
+      updateSelectInput(
+        session,
+        "hist_x",
+        choices = names(myData_numerics()))
       
-      
+      updateSelectInput(
+        session,
+        "fill_hist",
+        choices = c("None", names(myData_cat())))
       
       
     })
@@ -405,13 +387,7 @@ transform_data = function(data, func){
       
       
     })
-    
-    # output$select <- renderUI({
-    #   df <- myData()
-    #   selectInput("variable", "Variable:", names(df))
-    #   
-    #   
-    # })
+
     output$DataPreview <- renderUI({
       
       HTML("<h2>Data Preview</h2>")
@@ -427,14 +403,7 @@ transform_data = function(data, func){
     # 
     #   
     # })
-    
-    
-    
-    # output$plot <- renderPlot({
-    #   df <- myData()
-    #   df <- df[, input$variable]
-    #   hist(df)
-    # })
+
     output$header_agg <- renderUI({
       
       HTML("<h2>Data aggregation</h2>")
@@ -461,14 +430,57 @@ transform_data = function(data, func){
       col_x = input$outl_col1
       col_y = input$outl_col2
       col_fill = input$col_fill
-      ggplot(data=data, aes_string(y=col_y, x = col_x, fill=col_fill))+ geom_boxplot()+
+
+
+      if (col_fill == "None"){
+        col_fill = NULL
+        plt = ggplot(data=data, aes_string(y=col_y, x = col_x, fill=col_fill))+ geom_boxplot(fill="#ADD8E6")
+      }else{
+        col_fill = input$col_fill
+        plt = ggplot(data=data, aes_string(y=col_y, x = col_x, fill=col_fill))+ geom_boxplot()
+      }
+      if(input$flip_coords == TRUE){
+        plt = plt+coord_flip()
+      }
+
+      
+      plt+
       theme_bw()+
       labs(title=paste(col_x, " VS ", col_y))+
       scale_fill_brewer(palette = "Pastel2")+
       theme(axis.title.y = element_text(size=20),
             axis.title.x = element_text(size=20),
-            title = element_text(size=20))
+            title = element_text(size=15))
     })
+    
+    output$pltHist <- renderPlot({ 
+      
+      data=myData()
+      data = fill_missing_vals(data, "median")
+      col_x = input$hist_x
+      binsize = input$binsize
+      col_fill = input$fill_hist
+
+      
+      
+      if (col_fill == "None"){
+        col_fill = NULL
+        plt = ggplot(data=data, aes_string( x = col_x, fill=col_fill))+ geom_histogram(fill="#ADD8E6", bins = binsize)
+      }else{
+        col_fill = input$fill_hist
+        plt = ggplot(data=data, aes_string(x = col_x, fill=col_fill))+ geom_histogram( bins = binsize)
+      }
+
+      
+      plt+
+        theme_bw()+
+        labs(title=paste(col_x, " histogram plot"))+
+        scale_fill_brewer(palette = "Pastel2")+
+        theme(axis.title.x = element_text(size=20),
+              title = element_text(size=15))
+    })
+    
+    
     output$header_preprocess <- renderUI({
 
       HTML("<h2>Data Preporcessing</h2>")
@@ -476,6 +488,7 @@ transform_data = function(data, func){
     })
     
     output$data_transformed <- DT::renderDataTable({
+
       data = myData()
       data = fill_missing_vals(data, "mean")
       data_old = data.frame()
@@ -521,26 +534,13 @@ transform_data = function(data, func){
       }
       
       
-      
-      
-      
-      # if (is.null(input$outliers)){
-      #   data = data_old
-      # }
-      
+
       return(data)
       
     }, options = list(scrollX = T))
 
-  #   output$test <- renderUI({
-  #     
-  # 
-  # # HTML())
-  # HTML(paste(input$outl_col1, "bb"))
-  #   })
-    
     
   }
 
-  # Create Shiny object
+
   shinyApp(ui = ui, server = server)

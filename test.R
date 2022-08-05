@@ -1,6 +1,7 @@
 library(ggplot2)
 library(dplyr)
 data=read.csv("oil.csv")
+data=read.csv("output_df.csv")
 # ggplot(data=data, aes(y=CLOSE, x=""))+ geom_boxplot()
 
 
@@ -9,10 +10,17 @@ to_date = function(colname, data){
   return (data)
   
 }
-data=to_date("DATE", data)
+data=to_date("Date", data)
 head(data)
 
-as.Date("7-Oct-12", format = "%d-%b-%y")
+as.Date("2011-01-01", format = "%Y-%d-%m")
+as.Date("01-01-2011", format = "%m-%d-%Y")
+as.Date("1-Oct-12", format = "%d-%b-%y")
+
+as.Date("01-01-2011", format = "%d-%m-%Y")
+as.Date("Oct-01-2011", format = "%b-%d-%Y")
+as.Date("01-01-11", format = "%b-%d-%Y")
+
 data=read.csv("Car_company_customers.csv")
 
 factorize = function(data){
