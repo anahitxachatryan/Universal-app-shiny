@@ -1,5 +1,5 @@
 library(ggplot2)
-library(dplyr)
+
 data=read.csv("oil.csv")
 data=read.csv("output_df.csv")
 # ggplot(data=data, aes(y=CLOSE, x=""))+ geom_boxplot()
@@ -23,16 +23,6 @@ as.Date("01-01-11", format = "%b-%d-%Y")
 
 data=read.csv("Car_company_customers.csv")
 
-factorize = function(data){
-  data_cat = select(data, is.character)
-  col_names = names(data_cat)
-  data[col_names] = lapply(data[col_names] , as.factor)
-  return (data)
-}
-
-
-data = factorize(data)
-str(data)
 
 
 data=read.csv("oil.csv")
@@ -67,6 +57,24 @@ fill_missing_vals = function(data, stat_measure){
 data = fill_missing_vals(data, "std")
 head(data)
 
+#############################
+library(dplyr)
+
+to_date = function(colname, data) {
+  possible_formats = c("%Y-%d-%m", "%d-%b-%y", "%m-%d-%Y", "%b-%d-%Y", "%d-%m-%Y")
+  for (i in 1:length(possible_formats)) {
+    old_col = data[, colname]
+    data[, colname] = as.Date(data[, colname], format = possible_formats[i])
+    
+    if (sum(is.na(data[, colname])) == nrow(data)) {
+      data[, colname] = old_col
+    }
+  }
+  data[, colname] <- as.Date(data[, colname], format = format_given)
+  return (data)
+  
+}
+
 factorize = function(data) {
   
   for (i in 1:length(data)){
@@ -78,20 +86,56 @@ factorize = function(data) {
       if(is.numeric(data[,i])){
         data[,i] = as.character(data[,i])
         
+        
       }
+      data[,i] = as.factor(data[,i])
       
     }
   }
-  data_cat = select(data, is.character)
-  col_names = names(data_cat)
-  data[col_names] = lapply(data[col_names] , as.factor)
+
+  return (data)
+}
+
+
+outlier_detection = function(data) {
+  for (i in 1:ncol(data)) {
+    if (is.numeric(data[, i])) {
+      quartiles <- quantile(data[, i], probs = c(.25, .75), na.rm = FALSE)
+      IQR <- IQR(data[, i])
+      
+      Lower <- quartiles[1] - 1.5 * IQR
+      Upper <- quartiles[2] + 1.5 * IQR
+      
+      data <- subset(data, data[, i] > Lower & data[, i] < Upper)
+      
+    }
+  }
   return (data)
 }
 
 data=read.csv("output_df.csv")
+ggplot(data = data, aes_string(y = "Count")) + geom_boxplot(fill = "#ADD8E6")
+
+
 head(data)
 data = factorize(data)
 str(data)
 head(data)
+data = to_date("Date",data)
 select_if(data, is.factor)
+
+data=read.csv("output_df.csv")
+data[1,4] = NA
+write.csv(data,"output_df_changed.csv", row.names = FALSE)
+
+data_s = read.csv("saved.csv")
+str(data_s)
+library(dplyr)
+grouped_df = data_s %>%
+  group_by(Gender, Ever_Married) %>%
+  summarise(Age_m = mean(Age), na.rm = TRUE)
+grouped_df
+
+data_s = outlier_detection(data_s)
+str(data_s)
 
