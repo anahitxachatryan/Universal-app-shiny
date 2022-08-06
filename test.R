@@ -82,7 +82,7 @@ factorize = function(data) {
     num_uniques = length(unique(data[[i]]))
     print(names(data[i]))
     print(num_uniques)
-    if(num_uniques <= 25){
+    if(num_uniques <= 100){
       if(is.numeric(data[,i])){
         data[,i] = as.character(data[,i])
         
@@ -139,3 +139,65 @@ grouped_df
 data_s = outlier_detection(data_s)
 str(data_s)
 
+
+
+
+corr_mat <- round(cor(data[, unlist(lapply(data, is.numeric))], use = "complete.obs"),2)
+corr_mat
+melted_corr_mat <- melt(corr_mat)
+
+ggplot(data = melted_corr_mat, aes(x=Var1, y=Var2, fill = value)) +
+  geom_tile() +
+  geom_text(aes(Var2, Var1, label = value),
+            color = "white", size = 10)
+
+head(data)
+get_mode = function(col) {
+  return(names(sort(
+    table(col), decreasing = T, na.last = T
+  )[1]))
+}
+
+fill_missing_vals = function(data, stat_measure) {
+  for (i in 1:ncol(data)) {
+    if (is.numeric(data[, i])) {
+      if (stat_measure == 'mean') {
+        data[, i][is.na(data[, i])] = round(mean(data[, i], na.rm = TRUE),
+                                            digits = 2)
+      }
+      if (stat_measure == 'std') {
+        data[, i][is.na(data[, i])] = round(sd(data[, i],  na.rm = TRUE),
+                                            digits = 2)
+      }
+      if (stat_measure == 'median') {
+        data[, i][is.na(data[, i])] = round(median(data[, i],  na.rm = TRUE),
+                                            digits = 2)
+      }
+    }
+    else{
+      data[, i][is.na(data[, i])] = get_mode(data[, i])
+    }
+  }
+  
+  return(data)
+}
+
+outlier_detection = function(data) {
+  for (i in 1:ncol(data)) {
+    if (is.numeric(data[,i])) {
+
+      quartiles <- quantile(data[, i], probs = c(.25, .75), na.rm = FALSE)
+      IQR <- IQR(data[, i])
+      Lower <- quartiles[1] - 1.5 * IQR
+      Upper <- quartiles[2] + 1.5 * IQR
+      data <- subset(data, data[, i] >= Lower & data[, i] <= Upper)
+      
+    }
+  }
+  return (data)
+}
+data= read.csv("DS_prject.csv")
+data = fill_missing_vals(data, "mean")
+data = factorize(data)
+data = outlier_detection(data)
+head(data)

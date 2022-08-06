@@ -24,7 +24,7 @@ factorize = function(data) {
   for (i in 1:length(data)){
     num_uniques = 0
     num_uniques = length(unique(data[[i]]))
-    if(num_uniques <= 25){
+    if(num_uniques <= 100){
       if(is.numeric(data[,i])){
         data[,i] = as.character(data[,i])
         
@@ -89,14 +89,13 @@ fill_missing_vals = function(data, stat_measure) {
 
 outlier_detection = function(data) {
   for (i in 1:ncol(data)) {
-    if (is.numeric(data[, i])) {
+    if (is.numeric(data[,i])) {
+      
       quartiles <- quantile(data[, i], probs = c(.25, .75), na.rm = FALSE)
       IQR <- IQR(data[, i])
-      
       Lower <- quartiles[1] - 1.5 * IQR
       Upper <- quartiles[2] + 1.5 * IQR
-      
-      data <- subset(data, data[, i] > Lower & data[, i] < Upper)
+      data <- subset(data, data[, i] >= Lower & data[, i] <= Upper)
       
     }
   }
@@ -767,7 +766,7 @@ server <- function(input, output, session) {
     second_var = input$heat_y
     data = myData() %>%
       select(!!!rlang::syms(first_var))
-    corr_mat <- round(cor(data[, unlist(lapply(data, is.numeric))]),2)
+    corr_mat <- round(cor(data[, unlist(lapply(data, is.numeric))], use = "complete.obs"),2)
     melted_corr_mat <- melt(corr_mat)
     
     ggplot(data = melted_corr_mat, aes(x=Var1, y=Var2, fill = value)) +
@@ -801,6 +800,8 @@ server <- function(input, output, session) {
       
     }
     if (is.null(input$outliers) == FALSE) {
+      data = read_saved_data("saved.csv")
+      data = factorize(data)
       data = outlier_detection(data)
       write.csv(data,"saved.csv", row.names = FALSE)
     }
