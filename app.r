@@ -23,7 +23,7 @@ factorize = function(data) {
   for (i in 1:length(data)) {
     num_uniques = 0
     num_uniques = length(unique(data[[i]]))
-    if (num_uniques <= 100) {
+    if (num_uniques <= 70) {
       if (is.numeric(data[, i])) {
         data[, i] = as.character(data[, i])
         
