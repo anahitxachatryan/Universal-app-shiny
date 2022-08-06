@@ -67,11 +67,31 @@ fill_missing_vals = function(data, stat_measure){
 data = fill_missing_vals(data, "std")
 head(data)
 
+factorize = function(data) {
+  
+  for (i in 1:length(data)){
+    num_uniques = 0
+    num_uniques = length(unique(data[[i]]))
+    print(names(data[i]))
+    print(num_uniques)
+    if(num_uniques <= 25){
+      if(is.numeric(data[,i])){
+        data[,i] = as.character(data[,i])
+        
+      }
+      
+    }
+  }
+  data_cat = select(data, is.character)
+  col_names = names(data_cat)
+  data[col_names] = lapply(data[col_names] , as.factor)
+  return (data)
+}
 
+data=read.csv("output_df.csv")
+head(data)
+data = factorize(data)
+str(data)
+head(data)
+select_if(data, is.factor)
 
-
-library(plotly)
-fig <- plot_ly(y = ~rnorm(50), type = "box")
-fig <- fig %>% add_trace(y = ~rnorm(50, 1))
-
-fig
