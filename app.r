@@ -502,7 +502,8 @@ server <- function(input, output, session) {
   
   
   output$agg_table <- DT::renderDataTable({
-    data = read_saved_data("saved.csv")
+    data = read.csv("saved.csv", stringsAsFactors = F)
+    data = factorize(data)
     grouped_df = data %>%
       group_by(!!!rlang::syms(input$groupby)) %>%
       summarise_at(input$aggregate, (input$func), na.rm = TRUE)
@@ -792,8 +793,8 @@ server <- function(input, output, session) {
       
     }
     if (is.null(input$outliers) == FALSE) {
-      data = read_saved_data("saved.csv")
-      data = factorize(data)
+      data = myData()
+
       data = outlier_detection(data)
       write.csv(data, "saved.csv", row.names = FALSE)
     }
