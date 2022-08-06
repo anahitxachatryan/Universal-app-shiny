@@ -7,8 +7,8 @@ library(reshape2)
 if (!require("DT"))
   install.packages('DT')
 
-read_saved_data = function(path){
-  if (file.exists(path)){
+read_saved_data = function(path) {
+  if (file.exists(path)) {
     data = read.csv("saved.csv", stringsAsFactors = F)
     data = factorize(data)
     return(data)
@@ -16,21 +16,20 @@ read_saved_data = function(path){
   else{
     return (NULL)
   }
-
+  
 }
 
 factorize = function(data) {
-  
-  for (i in 1:length(data)){
+  for (i in 1:length(data)) {
     num_uniques = 0
     num_uniques = length(unique(data[[i]]))
-    if(num_uniques <= 100){
-      if(is.numeric(data[,i])){
-        data[,i] = as.character(data[,i])
+    if (num_uniques <= 100) {
+      if (is.numeric(data[, i])) {
+        data[, i] = as.character(data[, i])
         
         
       }
-      data[,i] = as.factor(data[,i])
+      data[, i] = as.factor(data[, i])
       
     }
   }
@@ -89,8 +88,7 @@ fill_missing_vals = function(data, stat_measure) {
 
 outlier_detection = function(data) {
   for (i in 1:ncol(data)) {
-    if (is.numeric(data[,i])) {
-      
+    if (is.numeric(data[, i])) {
       quartiles <- quantile(data[, i], probs = c(.25, .75), na.rm = FALSE)
       IQR <- IQR(data[, i])
       Lower <- quartiles[1] - 1.5 * IQR
@@ -283,7 +281,6 @@ ui <- fluidPage(
       ),
       
       mainPanel(
-        
         htmlOutput("header_outliers"),
         plotOutput("boxplotOutliers")
         
@@ -334,29 +331,32 @@ ui <- fluidPage(
       mainPanel(htmlOutput("line_plot"),
                 plotOutput("pltLinePlot")),
     ),
-    tabPanel("Bar Plot",
-             sidebarPanel(
-               selectInput("var_1", "Select X axis:", "", multiple = FALSE),
-               selectInput("var_2", "Select fill column:", "", multiple = FALSE),
-               actionButton("barPlt_button", label = "Update", width = 200),
-               hr()
-             ),
-             mainPanel(htmlOutput("bar_plot"),
-                       plotOutput("pltBarPlot")),),
-    tabPanel("Heatmap" ,
-             sidebarPanel(
-               selectInput("heat_x" , "Select columns", "", multiple = TRUE),
-               actionButton("heatmap_button", label = "Update", width = 200),
-               hr()
-             ),
-             mainPanel(htmlOutput("heat_map"),
-                       plotOutput("pltheat")),
+    tabPanel(
+      "Bar Plot",
+      sidebarPanel(
+        selectInput("var_1", "Select X axis:", "", multiple = FALSE),
+        selectInput("var_2", "Select fill column:", "", multiple = FALSE),
+        actionButton("barPlt_button", label = "Update", width = 200),
+        hr()
+      ),
+      mainPanel(htmlOutput("bar_plot"),
+                plotOutput("pltBarPlot")),
+    ),
+    tabPanel(
+      "Heatmap" ,
+      sidebarPanel(
+        selectInput("heat_x" , "Select columns", "", multiple = TRUE),
+        actionButton("heatmap_button", label = "Update", width = 200),
+        hr()
+      ),
+      mainPanel(htmlOutput("heat_map"),
+                plotOutput("pltheat")),
     ),
     
     
   ) # navbarPage
 ) # fluidPage
-options(shiny.maxRequestSize=30*1024^2)
+options(shiny.maxRequestSize = 30 * 1024 ^ 2)
 
 server <- function(input, output, session) {
   inFile <- reactive({
@@ -372,29 +372,25 @@ server <- function(input, output, session) {
       return(NULL)
     } else {
       data = read.csv(inFile()$datapath, stringsAsFactors = F)
-      # data = factorize(data)
+      
       if (input$date != "") {
-        # data = fill_missing_vals(data, "median")
         col = input$date
         data = to_date(col, data)
         
-        
       }
       data = factorize(data)
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
     }
-
+    
     return (data)
   })
   
-
+  
   take_data <- reactive({
     if (is.null(inFile())) {
       return(NULL)
     } else {
-
-
-        data = read.csv(inFile()$datapath, stringsAsFactors = F)
+      data = read.csv(inFile()$datapath, stringsAsFactors = F)
       
       
       data = factorize(data)
@@ -406,9 +402,8 @@ server <- function(input, output, session) {
   myData_cat <- reactive({
     if (is.null(inFile())) {
       return(NULL)
-    } 
+    }
     else {
-
       data = read.csv(inFile()$datapath, stringsAsFactors = F)
       
       data = factorize(data)
@@ -421,9 +416,8 @@ server <- function(input, output, session) {
   myData_numerics <- reactive({
     if (is.null(inFile())) {
       return(NULL)
-    } 
+    }
     else {
-
       data = read.csv(inFile()$datapath, stringsAsFactors = F)
       
       data = factorize(data)
@@ -431,8 +425,8 @@ server <- function(input, output, session) {
       return(data_num)
     }
   })
-  observeEvent(input$tabsetPanelID,{
-    if(input$tabsetPanelID == "explore"){
+  observeEvent(input$tabsetPanelID, {
+    if (input$tabsetPanelID == "explore") {
       data = read.csv("saved.csv", stringsAsFactors = F)
     }
   })
@@ -494,9 +488,12 @@ server <- function(input, output, session) {
     updateSelectInput(session,
                       "fill_heat",
                       choices = c("None", names(myData_cat())))
-    updateSelectInput(session,
-                      "heat_x",
-                      choices = names(myData_numerics()), selected = names(myData_numerics()[1:2]))
+    updateSelectInput(
+      session,
+      "heat_x",
+      choices = names(myData_numerics()),
+      selected = names(myData_numerics()[1:2])
+    )
     
     
     
@@ -552,12 +549,6 @@ server <- function(input, output, session) {
     
   })
   
-  # output$test <- renderUI({
-  # 
-  #     HTML(paste(input$filtered_table),"aa")
-  # 
-  # 
-  # })
   
   output$header_agg <- renderUI({
     HTML("<h2>Data aggregation</h2>")
@@ -594,7 +585,7 @@ server <- function(input, output, session) {
   
   output$boxplotOutliers <- renderPlot({
     data = read_saved_data("saved.csv")
-    if (input$boxPlt_button){
+    if (input$boxPlt_button) {
       data = read_saved_data("saved.csv")
     }
     
@@ -603,7 +594,7 @@ server <- function(input, output, session) {
     col_y = input$outl_col2
     col_fill = input$col_fill
     
-
+    
     
     if (col_fill == "None") {
       col_fill = NULL
@@ -635,7 +626,7 @@ server <- function(input, output, session) {
   })
   output$pltScatterPlot <- renderPlot({
     data = read_saved_data("saved.csv")
-    if (input$scatterPlt_button){
+    if (input$scatterPlt_button) {
       data = read_saved_data("saved.csv")
     }
     first = input$first_variable
@@ -666,7 +657,7 @@ server <- function(input, output, session) {
   
   output$pltLinePlot <- renderPlot({
     data = read_saved_data("saved.csv")
-    if (input$linePlt_button){
+    if (input$linePlt_button) {
       data = read_saved_data("saved.csv")
     }
     first = input$first_var
@@ -696,10 +687,10 @@ server <- function(input, output, session) {
   })
   output$pltHist <- renderPlot({
     data = read_saved_data("saved.csv")
-    if (input$hist_button){
+    if (input$hist_button) {
       data = read_saved_data("saved.csv")
     }
-   
+    
     col_x = input$hist_x
     binsize = input$binsize
     col_fill = input$fill_hist
@@ -732,7 +723,7 @@ server <- function(input, output, session) {
   })
   output$pltBarPlot <- renderPlot({
     data = read_saved_data("saved.csv")
-    if (input$barPlt_button){
+    if (input$barPlt_button) {
       data = read_saved_data("saved.csv")
     }
     first = input$var_1
@@ -744,9 +735,9 @@ server <- function(input, output, session) {
     } else{
       second =  input$var_2
       plt = ggplot(data = data, aes_string(x = first, fill = second)) +
-        geom_bar( position = 'dodge')
+        geom_bar(position = 'dodge')
     }
-    plt+
+    plt +
       theme_bw() +
       labs(title = paste(first, " Bar plot")) +
       scale_fill_brewer(palette = "Pastel2") +
@@ -757,22 +748,23 @@ server <- function(input, output, session) {
   
   
   output$pltheat <- renderPlot({
-
     data = read_saved_data("saved.csv")
-    if (input$heatmap_button){
+    if (input$heatmap_button) {
       data = read_saved_data("saved.csv")
     }
     first_var = input$heat_x
     second_var = input$heat_y
     data = myData() %>%
       select(!!!rlang::syms(first_var))
-    corr_mat <- round(cor(data[, unlist(lapply(data, is.numeric))], use = "complete.obs"),2)
+    corr_mat <-
+      round(cor(data[, unlist(lapply(data, is.numeric))], use = "complete.obs"), 2)
     melted_corr_mat <- melt(corr_mat)
     
-    ggplot(data = melted_corr_mat, aes(x=Var1, y=Var2, fill = value)) +
+    ggplot(data = melted_corr_mat, aes(x = Var1, y = Var2, fill = value)) +
       geom_tile() +
       geom_text(aes(Var2, Var1, label = value),
-                color = "white", size = 10)
+                color = "white",
+                size = 10)
     
   })
   
@@ -784,52 +776,51 @@ server <- function(input, output, session) {
     if (input$MissingVals == 'Mean') {
       data = myData()
       data = fill_missing_vals(data, "mean")
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     else if (input$MissingVals == 'Std') {
       data = myData()
       data = fill_missing_vals(data, "std")
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     else if (input$MissingVals == 'Median') {
       data = myData()
       data = fill_missing_vals(data, "median")
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     if (is.null(input$outliers) == FALSE) {
       data = read_saved_data("saved.csv")
       data = factorize(data)
       data = outlier_detection(data)
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
     }
     
     if (input$transform == 'norm') {
       data = transform_data(data, 'norm')
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     if (input$transform == 'log') {
       data = transform_data(data, 'log')
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     if (input$transform == 'sqr') {
       data = transform_data(data, 'sqr')
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     if (input$transform == 'nothing') {
       data = fill_missing_vals(data, "mean")
-      write.csv(data,"saved.csv", row.names = FALSE)
+      write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     
-    write.csv(data,"saved.csv", row.names = FALSE)
-
-    # data = read.csv("saved.csv", stringsAsFactors = F)
+    write.csv(data, "saved.csv", row.names = FALSE)
+    
     return(data)
     
   }, options = list(scrollX = T))
