@@ -4,6 +4,7 @@ library(dplyr)
 library(ggplot2)
 library(ggthemes)
 library(reshape2)
+library(tidyr)
 if (!require("DT"))
   install.packages('DT')
 
@@ -64,6 +65,9 @@ get_mode = function(col) {
 fill_missing_vals = function(data, stat_measure) {
   for (i in 1:ncol(data)) {
     if (is.numeric(data[, i])) {
+      if (stat_measure == 'dropna') {
+        data = data %>% drop_na()
+      }
       if (stat_measure == 'mean') {
         data[, i][is.na(data[, i])] = round(mean(data[, i], na.rm = TRUE),
                                             digits = 2)
@@ -203,6 +207,7 @@ ui <- fluidPage(
           "MissingVals",
           "Replace Missing Values:",
           c(
+            "Drop NaN values" = "dropna",
             "Mean" = "Mean",
             "Std" = "Std",
             "Median" = "Median"
@@ -473,6 +478,7 @@ server <- function(input, output, session) {
     updateSelectInput(session,
                       "first_var",
                       choices = names(myData_numerics()))
+    
     updateSelectInput(session,
                       "second_var",
                       choices = names(myData_numerics()))
@@ -787,6 +793,14 @@ server <- function(input, output, session) {
     data = myData()
     data = fill_missing_vals(data, "mean")
     data_old = data.frame()
+    
+    if (input$MissingVals == 'dropna') {
+      data = myData()
+      data = fill_missing_vals(data, "dropna")
+      write.csv(data, "saved.csv", row.names = FALSE)
+      
+    }
+    
     if (input$MissingVals == 'Mean') {
       data = myData()
       data = fill_missing_vals(data, "mean")
