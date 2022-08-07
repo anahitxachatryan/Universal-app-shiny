@@ -89,7 +89,7 @@ fill_missing_vals = function(data, stat_measure) {
 outlier_detection = function(data) {
   for (i in 1:ncol(data)) {
     if (is.numeric(data[, i])) {
-      quartiles <- quantile(data[, i], probs = c(.25, .75), na.rm = FALSE)
+      quartiles <- quantile(data[, i], probs = c(.25, .75), na.rm = TRUE)
       IQR <- IQR(data[, i])
       Lower <- quartiles[1] - 1.5 * IQR
       Upper <- quartiles[2] + 1.5 * IQR
@@ -261,7 +261,7 @@ ui <- fluidPage(
       ),
       
       mainPanel(
-        # htmlOutput('test'),
+        verbatimTextOutput('test'),
         htmlOutput("header_agg"),
         DT::dataTableOutput('agg_table'),
         htmlOutput("header_filter"),
@@ -269,7 +269,7 @@ ui <- fluidPage(
       )
     ),
     tabPanel(
-      "Outliers/Box Plot",
+      "Box Plot",
       sidebarPanel(
         selectInput("outl_col1", "Select X axis:", "", multiple = FALSE),
         selectInput("outl_col2", "Select Y axis:", "", multiple = FALSE),
@@ -446,10 +446,10 @@ server <- function(input, output, session) {
                       choices = names(take_data()))
     updateSelectInput(session,
                       "outl_col1",
-                      choices = names(take_data()))
+                      choices = names(myData_cat()))
     updateSelectInput(session,
                       "outl_col2",
-                      choices = c("None", names(myData_numerics())))
+                      choices = names(myData_numerics()))
     updateSelectInput(session,
                       "col_fill",
                       choices = c("None", names(myData_cat())))
@@ -502,11 +502,12 @@ server <- function(input, output, session) {
   
   
   output$agg_table <- DT::renderDataTable({
-    data = read.csv("saved.csv", stringsAsFactors = F)
-    data = factorize(data)
+    data = take_data()
+    
     grouped_df = data %>%
       group_by(!!!rlang::syms(input$groupby)) %>%
-      summarise_at(input$aggregate, (input$func), na.rm = TRUE)
+      # summarise(aa = mean(amount_request))
+      summarise_at(input$aggregate, (input$func), na.rm=TRUE)
     return(grouped_df)
     
     
@@ -541,6 +542,14 @@ server <- function(input, output, session) {
     
     
   })
+  # output$test <- renderPrint({
+  #   data = read_saved_data("saved.csv")
+  #     glimpse(myData())
+  #     
+  #   
+  # 
+  #   
+  # })
   
   output$DataPreview <- renderUI({
     HTML("<h2>Data Preview</h2>")
@@ -549,6 +558,14 @@ server <- function(input, output, session) {
     HTML("<h2>Summary</h2>")
     
   })
+  # output$test <- renderUI({
+  #   # HTML(data$aggregate)
+  #   # HTML(paste(data$aggregate,"saaa"))
+  #   data = read_saved_data("saved.csv")
+  #   col = input$aggregate
+  #   HTML(paste(is.numeric(data[,col]), "aaa"))
+  #   
+  # })
   
   
   output$header_agg <- renderUI({
@@ -601,10 +618,6 @@ server <- function(input, output, session) {
       col_fill = NULL
       plt = ggplot(data = data, aes_string(y = col_y, x = col_x, fill =
                                              col_fill)) + geom_boxplot(fill = "#ADD8E6")
-      if (col_y == "None") {
-        col_fill = ""
-        plt = ggplot(data = data, aes_string(y = col_x)) + geom_boxplot(fill = "#ADD8E6")
-      }
     } else{
       col_fill = input$col_fill
       plt = ggplot(data = data, aes_string(y = col_y, x = col_x, fill =
@@ -789,12 +802,12 @@ server <- function(input, output, session) {
     else if (input$MissingVals == 'Median') {
       data = myData()
       data = fill_missing_vals(data, "median")
-      write.csv(data, "saved.csv", row.names = FALSE)
+      # write.csv(data, "saved.csv", row.names = FALSE)
       
     }
     if (is.null(input$outliers) == FALSE) {
-      data = myData()
-
+      data = read_saved_data("saved.csv")
+      # data = fill_missing_vals(data, "median")
       data = outlier_detection(data)
       write.csv(data, "saved.csv", row.names = FALSE)
     }
@@ -820,7 +833,7 @@ server <- function(input, output, session) {
       
     }
     
-    write.csv(data, "saved.csv", row.names = FALSE)
+    # write.csv(data, "saved.csv", row.names = FALSE)
     
     return(data)
     
