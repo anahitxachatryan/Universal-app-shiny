@@ -357,6 +357,16 @@ ui <- fluidPage(
       mainPanel(htmlOutput("heat_map"),
                 plotOutput("pltheat")),
     ),
+    tabPanel(
+      "Pie Chart" ,
+      sidebarPanel(
+        selectInput("pieChart" , "Select columns", "", multiple = F),
+        actionButton("pieChart_button", label = "Update", width = 200),
+        hr()
+      ),
+      mainPanel(htmlOutput("pie_chart"),
+                plotOutput("pltPieChart")),
+    ),
     
     
   ) # navbarPage
@@ -494,6 +504,9 @@ server <- function(input, output, session) {
     updateSelectInput(session,
                       "fill_heat",
                       choices = c("None", names(myData_cat())))
+    updateSelectInput(session,
+                      "pieChart",
+                      choices = c(names(myData_cat())))
     updateSelectInput(
       session,
       "heat_x",
@@ -513,7 +526,7 @@ server <- function(input, output, session) {
     grouped_df = data %>%
       group_by(!!!rlang::syms(input$groupby)) %>%
       # summarise(aa = mean(amount_request))
-      summarise_at(input$aggregate, (input$func), na.rm=TRUE)
+      summarise_at(input$aggregate, (input$func), na.rm = TRUE)
     return(grouped_df)
     
     
@@ -548,15 +561,6 @@ server <- function(input, output, session) {
     
     
   })
-  # output$test <- renderPrint({
-  #   data = read_saved_data("saved.csv")
-  #     glimpse(myData())
-  #     
-  #   
-  # 
-  #   
-  # })
-  
   output$DataPreview <- renderUI({
     HTML("<h2>Data Preview</h2>")
   })
@@ -564,16 +568,9 @@ server <- function(input, output, session) {
     HTML("<h2>Summary</h2>")
     
   })
-  # output$test <- renderUI({
-  #   # HTML(data$aggregate)
-  #   # HTML(paste(data$aggregate,"saaa"))
-  #   data = read_saved_data("saved.csv")
-  #   col = input$aggregate
-  #   HTML(paste(is.numeric(data[,col]), "aaa"))
-  #   
-  # })
-  
-  
+  output$pie_chart <- renderUI({
+    HTML("<h2>Pie Chart</h2>")
+  })
   output$header_agg <- renderUI({
     HTML("<h2>Data aggregation</h2>")
     
@@ -605,6 +602,7 @@ server <- function(input, output, session) {
   output$heat_map <- renderUI({
     HTML("<h2>Heat map</h2>")
   })
+  
   
   
   output$boxplotOutliers <- renderPlot({
@@ -720,11 +718,13 @@ server <- function(input, output, session) {
     if (col_fill == "None") {
       col_fill = NULL
       plt = ggplot(data = data, aes_string(x = col_x, fill = col_fill)) +
-        geom_histogram(fill =  "#ADD8E6", bins = binsize)
+        geom_histogram(fill =  "#ADD8E6",
+                       bins = binsize,
+                       stat = "count")
     } else{
       col_fill = input$fill_hist
       plt = ggplot(data = data, aes_string(x = col_x, fill = col_fill)) +
-        geom_histogram(bins = binsize)
+        geom_histogram(bins = binsize, stat = "count")
     }
     
     
@@ -786,6 +786,17 @@ server <- function(input, output, session) {
                 color = "white",
                 size = 10)
     
+  })
+  output$pltPieChart <- renderPlot({
+    data = read_saved_data("saved.csv")
+    if (input$pieChart_button) {
+      data = read_saved_data("saved.csv")
+    }
+    first_var = input$pieChart
+    
+    ggplot(data, aes_string(x = factor(1), fill = first_var)) + geom_bar() +
+      coord_polar(theta = "y", start = 0) +
+      theme_minimal()
   })
   
   
