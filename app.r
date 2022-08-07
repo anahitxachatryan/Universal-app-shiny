@@ -8,6 +8,11 @@ library(tidyr)
 if (!require("DT"))
   install.packages('DT')
 
+
+if (file.exists("saved.csv")) {
+  file.remove("saved.csv")
+}
+
 read_saved_data = function(path) {
   if (file.exists(path)) {
     data = read.csv("saved.csv", stringsAsFactors = F)
